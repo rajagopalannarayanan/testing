@@ -20,6 +20,7 @@
     </form>
 
     <div id="status" class="text-sm text-center font-medium"></div>
+    <div id="timer" class="text-center text-gray-500 text-sm mt-1"></div>
     <button id="downloadBtn" class="w-full bg-green-600 text-white p-2 rounded mt-4 hidden hover:bg-green-700">Download CSV</button>
   </div>
 
@@ -30,8 +31,34 @@
     const statusDiv = document.getElementById('status');
     const downloadBtn = document.getElementById('downloadBtn');
     const clearBtn = document.getElementById('clearBtn');
+    const timerDiv = document.getElementById('timer');
 
     let collectedData = [];
+    let countdownInterval;
+
+    function startTimer(duration) {
+      let timeRemaining = duration;
+      updateTimerDisplay(timeRemaining);
+
+      countdownInterval = setInterval(() => {
+        timeRemaining--;
+        updateTimerDisplay(timeRemaining);
+        if (timeRemaining <= 0) {
+          clearInterval(countdownInterval);
+        }
+      }, 1000);
+    }
+
+    function stopTimer() {
+      clearInterval(countdownInterval);
+      timerDiv.textContent = '';
+    }
+
+    function updateTimerDisplay(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      timerDiv.textContent = `Time remaining: ${mins}:${secs.toString().padStart(2, '0')}`;
+    }
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -43,6 +70,11 @@
       statusDiv.textContent = "Processing...";
       statusDiv.className = "text-sm text-center font-medium text-gray-500";
       collectedData = [];
+      downloadBtn.classList.add('hidden');
+
+      // Estimate 2 seconds per post as a rough estimate (customize this if needed)
+      const estimatedSeconds = limit * 2;
+      startTimer(estimatedSeconds);
 
       try {
         const postsRes = await fetch(`http://localhost:4000/api/reddit?subreddit=${subreddit}&limit=${limit}`);
@@ -93,7 +125,9 @@
           });
         }
 
-        downloadBtn.classList.remove('hidden'); // Show download button
+        stopTimer();
+
+        downloadBtn.classList.remove('hidden');
         statusDiv.textContent = "Data fetched successfully! Click 'Download CSV' to get the file.";
         statusDiv.className = "text-sm text-green-600 text-center font-semibold";
 
@@ -131,6 +165,7 @@
 
       } catch (err) {
         console.error(err);
+        stopTimer();
         statusDiv.textContent = "Error fetching data";
         statusDiv.className = "text-sm text-red-600 text-center font-semibold";
       }
@@ -140,8 +175,10 @@
       input.value = '';
       limitInput.value = '';
       statusDiv.textContent = '';
+      timerDiv.textContent = '';
       collectedData = [];
-      downloadBtn.classList.add('hidden'); // Hide download button
+      stopTimer();
+      downloadBtn.classList.add('hidden');
     });
   </script>
 
